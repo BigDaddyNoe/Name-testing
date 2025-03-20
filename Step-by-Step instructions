@@ -1,0 +1,230 @@
+<!DOCTYPE html>                      % introduces document type
+<html lang="en">                     % making the language english 
+<head>                               % creating a header
+  <meta charset="UTF-8">
+  <title>Line Insertion Tutorial</title>     % title
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  % Setting size scale
+  % 
+<style>              
+    body {        
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      text-align: center;
+      margin: 0;
+      background-color: #f9f9f9;
+    }
+
+    h1 {
+      font-size: 2em;
+      margin-bottom: 20px;
+    }
+% creates the box that contains our step-by-step instructions 
+    #stepBox {
+      padding: 25px;
+      border: 2px solid #000;
+      border-radius: 10px;
+      display: inline-block;
+      font-size: 1.5em;
+      line-height: 1.6;
+      min-height: 150px;
+      width: 90%;
+      max-width: 600px;
+      background-color: #fff;
+      margin-top: 30px;
+    }
+
+    #status {
+      margin-top: 20px;
+      font-size: 1em;
+      color: green;
+    }
+
+    #logContainer {
+      margin: 40px auto 0 auto;
+      width: 90%;
+      max-width: 600px;
+      background: #fff;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      overflow-y: auto;
+      max-height: 200px;
+      text-align: left;
+      padding: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+
+    #logContainer h3 {
+      margin-top: 0;
+    }
+
+    .log-entry {
+      font-size: 0.95em;
+      border-bottom: 1px solid #eee;
+      padding: 4px 0;
+    }
+% creates a place that shows the live transcript of the voice commands
+    #liveTranscript {
+      position: fixed;
+      bottom: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #222;
+      color: #0f0;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 1em;
+      font-family: monospace;
+      opacity: 0.9;
+      z-index: 999;
+    }
+% creates a button that will have the functionality to have the full screen
+    #fullscreenBtn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Line Insertion Tutorial</h1>
+
+  <div id="stepBox">Say "next" to begin...</div>
+  <div id="status">Status: Listening...</div>
+
+  <div id="logContainer">
+    <h3>Command Log</h3>
+    <div id="log"></div>
+  </div>
+
+  <div id="liveTranscript">🎤 Waiting for input...</div>
+
+% gives the full screen button functionality
+  <!-- Fullscreen Toggle Button -->
+  <button id="fullscreenBtn">Enter Fullscreen</button>
+
+% 
+  <script>
+    const steps = [
+      "Step 1: Start with an empty list.",
+      "Step 2: Insert the first line of code at position 0.",
+      "Step 3: Move the cursor to the next position.",
+      "Step 4: Insert the second line at position 1.",
+      "Step 5: Repeat until all lines are inserted.",
+      "Step 6: Finalize and save the document."
+    ];
+
+    let currentStep = 0;
+
+    function updateStep() {
+      document.getElementById("stepBox").innerText = steps[currentStep];
+      if (currentStep === steps.length - 1) {
+        document.getElementById("status").innerText = "✅ You are on the final step!";
+      } else {
+        document.getElementById("status").innerText = `Step ${currentStep + 1} of ${steps.length}`;
+      }
+    }
+
+    function logCommand(text) {
+      const log = document.getElementById("log");
+      const entry = document.createElement("div");
+      entry.className = "log-entry";
+      entry.textContent = `🎤 ${new Date().toLocaleTimeString()}: ${text}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    updateStep();
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("Your browser doesn't support speech recognition.");
+    } else {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = "en-US";
+
+      recognition.onresult = (event) => {
+        const raw = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+        const cleaned = raw.replace(/[^\w\s]/gi, "").trim();
+
+        document.getElementById("liveTranscript").innerText = `🎤 ${raw}`;
+        logCommand(raw);
+
+        if (/\bnext\b/.test(cleaned)) {
+          if (currentStep < steps.length - 1) {
+            currentStep++;
+            updateStep();
+          } else {
+            document.getElementById("status").innerText = "🚫 You're already at the final step.";
+          }
+        } else if (/\b(previous|back|go back)\b/.test(cleaned)) {
+          if (currentStep > 0) {
+            currentStep--;
+            updateStep();
+          } else {
+            document.getElementById("status").innerText = "🚫 You're already at the first step.";
+          }
+        } else if (/\brestart\b/.test(cleaned)) {
+          currentStep = 0;
+          updateStep();
+          document.getElementById("status").innerText = "🔄 Restarted the tutorial.";
+        }
+      };
+
+      recognition.onerror = (event) => {
+        document.getElementById("status").innerText = `⚠️ Error: ${event.error}`;
+        document.getElementById("liveTranscript").innerText = `⚠️ Error: ${event.error}`;
+        logCommand(`ERROR: ${event.error}`);
+      };
+
+      recognition.onend = () => {
+        document.getElementById("status").innerText = "🔄 Restarting voice listener...";
+        setTimeout(() => recognition.start(), 500);
+      };
+
+      recognition.start();
+    }
+
+    // Fullscreen Toggle Functionality
+    const fullscreenBtn = document.getElementById("fullscreenBtn");
+
+    function openFullscreen() {
+      const elem = document.documentElement; // Fullscreen the entire document
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+      } else if (elem.webkitRequestFullscreen) { // Safari
+        elem.webkitRequestFullscreen();
+      } else if (elem.msRequestFullscreen) { // IE/Edge
+        elem.msRequestFullscreen();
+      }
+    }
+
+    function closeFullscreen() {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) { // Safari
+        document.webkitExitFullscreen();
+      } else if (document.msExitFullscreen) { // IE/Edge
+        document.msExitFullscreen();
+      }
+    }
+
+    // Event listener for fullscreen toggle
+    fullscreenBtn.addEventListener("click", function() {
+      if (!document.fullscreenElement) {
+        openFullscreen(); // Enter fullscreen mode
+        fullscreenBtn.innerText = "Exit Fullscreen"; // Change button text
+      } else {
+        closeFullscreen(); // Exit fullscreen mode
+        fullscreenBtn.innerText = "Enter Fullscreen"; // Change button text
+      }
+    });
+
+  </script>
+
+</body>
+</html>
